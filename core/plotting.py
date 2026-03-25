@@ -1,57 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 from plotly.figure_factory import create_quiver
-
-
-def create_phase_figure(X, Y, U, V):
-    fig = create_quiver(
-        X.flatten(),
-        Y.flatten(),
-        U.flatten(),
-        V.flatten(),
-        scale=0.15,
-        arrow_scale=0.3,
-        name="Vector field",
-    )
-
-    x_range, y_range = compute_axis_limits(X, Y, padding_ratio=0.05)
-
-    fig.update_layout(
-        title="Phase portrait",
-        xaxis_title="x",
-        yaxis_title="y",
-        template="plotly_white",
-        showlegend=False,
-    )
-
-    fig.update_xaxes(range=x_range)
-    fig.update_yaxes(range=y_range, scaleanchor="x", scaleratio=1)
-
-    return fig
-
-
-def add_trajectory(fig, x_traj, y_traj, name="Trajectory"):
-    fig.add_trace(
-        go.Scatter(
-            x=x_traj,
-            y=y_traj,
-            mode="lines",
-            name=name,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=[x_traj[0]],
-            y=[y_traj[0]],
-            mode="markers",
-            name=f"{name} start",
-            marker=dict(size=8),
-            showlegend=False,
-        )
-    )
-
-    return fig
+import matplotlib.pyplot as plt
 
 
 def compute_axis_limits(x_values, y_values, padding_ratio=0.08):
@@ -79,48 +29,125 @@ def compute_axis_limits(x_values, y_values, padding_ratio=0.08):
 
 def apply_axis_limits(fig, x_values, y_values, padding_ratio=0.08):
     x_range, y_range = compute_axis_limits(x_values, y_values, padding_ratio)
-
     fig.update_xaxes(range=x_range)
     fig.update_yaxes(range=y_range, scaleanchor="x", scaleratio=1)
+    return fig
+
+
+def create_phase_figure(X, Y, U, V):
+    fig = create_quiver(
+        X.flatten(),
+        Y.flatten(),
+        U.flatten(),
+        V.flatten(),
+        scale=0.15,
+        arrow_scale=0.3,
+        name="Vector field",
+    )
+
+    fig.update_layout(
+        title="Phase portrait",
+        xaxis_title="x",
+        yaxis_title="y",
+        template="plotly_white",
+    )
+
+    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    return fig
+
+
+def add_trajectory(fig, x_traj, y_traj, name="Trajectory"):
+    fig.add_trace(
+        go.Scatter(
+            x=x_traj,
+            y=y_traj,
+            mode="lines",
+            name=name,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=[x_traj[0]],
+            y=[y_traj[0]],
+            mode="markers",
+            marker=dict(size=7),
+            showlegend=False,
+        )
+    )
 
     return fig
 
 
-def add_nullclines(fig, X, Y, F, G, show_x_nullcline=True, show_y_nullcline=True):
-    if show_x_nullcline:
-        fig.add_trace(
-            go.Contour(
-                x=X[0, :],
-                y=Y[:, 0],
-                z=F,
-                contours=dict(
-                    start=0,
-                    end=0,
-                    size=1,
-                    coloring="none",
-                ),
-                line=dict(width=2),
-                name="x-nullcline (dx/dt = 0)",
-                showscale=False,
-            )
+def add_fixed_points(fig, fixed_points):
+    if not fixed_points:
+        return fig
+
+    x_vals = [p[0] for p in fixed_points]
+    y_vals = [p[1] for p in fixed_points]
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=y_vals,
+            mode="markers",
+            name="Fixed points",
+            marker=dict(size=10, symbol="x"),
         )
+    )
+
+    return fig
+
+
+def extract_zero_contours(X, Y, Z):
+    fig_tmp, ax_tmp = plt.subplots()
+    cs = ax_tmp.contour(X, Y, Z, levels=[0])
+
+    contour_lines = []
+    for level_segments in cs.allsegs:
+        for seg in level_segments:
+            if len(seg) >= 2:
+                contour_lines.append(seg.copy())
+
+    plt.close(fig_tmp)
+    return contour_lines
+
+
+def add_nullclines_from_contours(
+    fig,
+    X,
+    Y,
+    F,
+    G,
+    show_x_nullcline=True,
+    show_y_nullcline=True,
+):
+    if show_x_nullcline:
+        x_nullclines = extract_zero_contours(X, Y, F)
+        for i, vertices in enumerate(x_nullclines):
+            fig.add_trace(
+                go.Scatter(
+                    x=vertices[:, 0],
+                    y=vertices[:, 1],
+                    mode="lines",
+                    name="x-nullcline (dx/dt = 0)",
+                    line=dict(width=2),
+                    showlegend=(i == 0),
+                )
+            )
 
     if show_y_nullcline:
-        fig.add_trace(
-            go.Contour(
-                x=X[0, :],
-                y=Y[:, 0],
-                z=G,
-                contours=dict(
-                    start=0,
-                    end=0,
-                    size=1,
-                    coloring="none",
-                ),
-                line=dict(width=2, dash="dash"),
-                name="y-nullcline (dy/dt = 0)",
-                showscale=False,
+        y_nullclines = extract_zero_contours(X, Y, G)
+        for i, vertices in enumerate(y_nullclines):
+            fig.add_trace(
+                go.Scatter(
+                    x=vertices[:, 0],
+                    y=vertices[:, 1],
+                    mode="lines",
+                    name="y-nullcline (dy/dt = 0)",
+                    line=dict(width=2, dash="dash"),
+                    showlegend=(i == 0),
+                )
             )
-        )
 
     return fig

@@ -9,11 +9,13 @@ from core.system import (
     integrate_trajectory,
 )
 from core.plotting import (
-    add_nullclines,
+    add_fixed_points,
+    add_nullclines_from_contours,
     create_phase_figure,
     add_trajectory,
     apply_axis_limits,
 )
+from core.analysis import find_fixed_points_symbolic
 
 st.title("Nonlinear Dynamics App")
 
@@ -40,8 +42,10 @@ ics_text = st.text_area(
 show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=True)
 st.subheader("Nullclines")
+show_fixed_points = st.checkbox("Show fixed points", value=True)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=True)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=True)
+nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
 
 
 def parse_initial_conditions(text):
@@ -66,16 +70,25 @@ if st.button("Plot"):
 
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
         U, V = compute_vector_field(f_num, g_num, X, Y)
-        F, G = compute_scalar_fields(f_num, g_num, X, Y)
+
+        Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
+        Fn, Gn = compute_scalar_fields(f_num, g_num, Xn, Yn)
 
         fig = create_phase_figure(X, Y, U, V)
 
-        fig = add_nullclines(
+        fig = create_phase_figure(X, Y, U, V)
+
+        fixed_points = []
+        if show_fixed_points:
+            fixed_points = find_fixed_points_symbolic(f_expr, g_expr)
+            fig = add_fixed_points(fig, fixed_points)
+
+        fig = add_nullclines_from_contours(
             fig,
-            X,
-            Y,
-            F,
-            G,
+            Xn,
+            Yn,
+            Fn,
+            Gn,
             show_x_nullcline=show_x_nullcline,
             show_y_nullcline=show_y_nullcline,
         )
@@ -107,6 +120,17 @@ if st.button("Plot"):
         fig = apply_axis_limits(fig, X.flatten(), Y.flatten(), padding_ratio=0.03)
 
         st.plotly_chart(fig, use_container_width=True)
+
+        if show_fixed_points and fixed_points:
+            st.subheader("Fixed points")
+            for i, (xp, yp) in enumerate(fixed_points, start=1):
+                fx_val = f_num(xp, yp)
+                gy_val = g_num(xp, yp)
+                st.write(
+                    f"{i}. ({xp:.10g}, {yp:.10g}) | " f"f={fx_val:.3e}, g={gy_val:.3e}"
+                )
+        else:
+            st.write("No symbolic real fixed points found.")
 
         st.subheader("Parsed system")
         st.latex(r"\dot{x} = " + str(f_expr))

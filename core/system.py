@@ -15,6 +15,12 @@ def compute_vector_field(f, g, X, Y):
     return U, V
 
 
+def compute_scalar_fields(f, g, X, Y):
+    F = f(X, Y)
+    G = g(X, Y)
+    return F, G
+
+
 def integrate_trajectory(f, g, x0, y0, t_span=(0, 20), n_points=1000):
     def rhs(t, z):
         x, y = z

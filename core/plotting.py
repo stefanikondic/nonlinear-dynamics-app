@@ -84,3 +84,43 @@ def apply_axis_limits(fig, x_values, y_values, padding_ratio=0.08):
     fig.update_yaxes(range=y_range, scaleanchor="x", scaleratio=1)
 
     return fig
+
+
+def add_nullclines(fig, X, Y, F, G, show_x_nullcline=True, show_y_nullcline=True):
+    if show_x_nullcline:
+        fig.add_trace(
+            go.Contour(
+                x=X[0, :],
+                y=Y[:, 0],
+                z=F,
+                contours=dict(
+                    start=0,
+                    end=0,
+                    size=1,
+                    coloring="none",
+                ),
+                line=dict(width=2),
+                name="x-nullcline (dx/dt = 0)",
+                showscale=False,
+            )
+        )
+
+    if show_y_nullcline:
+        fig.add_trace(
+            go.Contour(
+                x=X[0, :],
+                y=Y[:, 0],
+                z=G,
+                contours=dict(
+                    start=0,
+                    end=0,
+                    size=1,
+                    coloring="none",
+                ),
+                line=dict(width=2, dash="dash"),
+                name="y-nullcline (dy/dt = 0)",
+                showscale=False,
+            )
+        )
+
+    return fig

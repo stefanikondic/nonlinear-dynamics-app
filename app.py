@@ -1,10 +1,19 @@
 import streamlit as st
+import numpy as np
 
 from core.parser import parse_system
-from core.system import create_mesh, compute_vector_field, integrate_trajectory
-from core.plotting import create_phase_figure, add_trajectory
-from core.plotting import create_phase_figure, add_trajectory, apply_axis_limits
-import numpy as np
+from core.system import (
+    compute_scalar_fields,
+    create_mesh,
+    compute_vector_field,
+    integrate_trajectory,
+)
+from core.plotting import (
+    add_nullclines,
+    create_phase_figure,
+    add_trajectory,
+    apply_axis_limits,
+)
 
 st.title("Nonlinear Dynamics App")
 
@@ -30,6 +39,9 @@ ics_text = st.text_area(
 
 show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=True)
+st.subheader("Nullclines")
+show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=True)
+show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=True)
 
 
 def parse_initial_conditions(text):
@@ -54,8 +66,19 @@ if st.button("Plot"):
 
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
         U, V = compute_vector_field(f_num, g_num, X, Y)
+        F, G = compute_scalar_fields(f_num, g_num, X, Y)
 
         fig = create_phase_figure(X, Y, U, V)
+
+        fig = add_nullclines(
+            fig,
+            X,
+            Y,
+            F,
+            G,
+            show_x_nullcline=show_x_nullcline,
+            show_y_nullcline=show_y_nullcline,
+        )
 
         all_x = [X.flatten()]
         all_y = [Y.flatten()]

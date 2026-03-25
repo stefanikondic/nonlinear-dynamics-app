@@ -21,6 +21,14 @@ def integrate_trajectory(f, g, x0, y0, t_span=(0, 20), n_points=1000):
         return [f(x, y), g(x, y)]
 
     t_eval = np.linspace(t_span[0], t_span[1], n_points)
-    sol = solve_ivp(rhs, t_span, [x0, y0], t_eval=t_eval)
+    sol = solve_ivp(
+        rhs,
+        t_span,
+        [x0, y0],
+        t_eval=t_eval,
+        rtol=1e-8,
+        atol=1e-10,
+        method="DOP853",
+    )
 
     return sol.y[0], sol.y[1]

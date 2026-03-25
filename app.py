@@ -2,7 +2,9 @@ import streamlit as st
 
 from core.parser import parse_system
 from core.system import create_mesh, compute_vector_field, integrate_trajectory
-from core.plotting import plot_vector_field, plot_trajectory
+from core.plotting import create_phase_figure, add_trajectory
+from core.plotting import create_phase_figure, add_trajectory, apply_axis_limits
+import numpy as np
 
 st.title("Nonlinear Dynamics App")
 
@@ -53,22 +55,35 @@ if st.button("Plot"):
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
         U, V = compute_vector_field(f_num, g_num, X, Y)
 
-        fig, ax = plot_vector_field(X, Y, U, V)
+        fig = create_phase_figure(X, Y, U, V)
 
-        for x0, y0 in initial_conditions:
+        all_x = [X.flatten()]
+        all_y = [Y.flatten()]
+
+        for i, (x0, y0) in enumerate(initial_conditions, start=1):
             if show_forward:
                 x_traj, y_traj = integrate_trajectory(
                     f_num, g_num, x0, y0, t_span=(0, t_max), n_points=n_points
                 )
-                plot_trajectory(ax, x_traj, y_traj)
+                fig = add_trajectory(fig, x_traj, y_traj, name=f"Forward {i}")
+                all_x.append(np.asarray(x_traj))
+                all_y.append(np.asarray(y_traj))
 
             if show_backward:
                 x_traj_b, y_traj_b = integrate_trajectory(
                     f_num, g_num, x0, y0, t_span=(0, -t_max), n_points=n_points
                 )
-                plot_trajectory(ax, x_traj_b, y_traj_b)
+                fig = add_trajectory(fig, x_traj_b, y_traj_b, name=f"Backward {i}")
+                all_x.append(np.asarray(x_traj_b))
+                all_y.append(np.asarray(y_traj_b))
 
-        st.pyplot(fig)
+        all_x = np.concatenate(all_x)
+        all_y = np.concatenate(all_y)
+
+        # fig = apply_axis_limits(fig, all_x, all_y, padding_ratio=0.06)
+        fig = apply_axis_limits(fig, X.flatten(), Y.flatten(), padding_ratio=0.03)
+
+        st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("Parsed system")
         st.latex(r"\dot{x} = " + str(f_expr))

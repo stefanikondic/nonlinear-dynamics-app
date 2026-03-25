@@ -124,3 +124,23 @@ def add_nullclines(fig, X, Y, F, G, show_x_nullcline=True, show_y_nullcline=True
         )
 
     return fig
+
+
+def add_fixed_points(fig, fixed_points):
+    if not fixed_points:
+        return fig
+
+    x_vals = [p[0] for p in fixed_points]
+    y_vals = [p[1] for p in fixed_points]
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=y_vals,
+            mode="markers",
+            name="Fixed points",
+            marker=dict(size=10, symbol="x"),
+        )
+    )
+
+    return fig

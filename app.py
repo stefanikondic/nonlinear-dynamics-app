@@ -13,7 +13,9 @@ from core.plotting import (
     create_phase_figure,
     add_trajectory,
     apply_axis_limits,
+    add_fixed_points,
 )
+from core.analysis import find_fixed_points_symbolic
 
 st.title("Nonlinear Dynamics App")
 
@@ -40,6 +42,7 @@ ics_text = st.text_area(
 show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=True)
 st.subheader("Nullclines")
+show_fixed_points = st.checkbox("Show fixed points", value=True)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=True)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=True)
 
@@ -69,6 +72,11 @@ if st.button("Plot"):
         F, G = compute_scalar_fields(f_num, g_num, X, Y)
 
         fig = create_phase_figure(X, Y, U, V)
+
+        fixed_points = []
+        if show_fixed_points:
+            fixed_points = find_fixed_points_symbolic(f_expr, g_expr)
+            fig = add_fixed_points(fig, fixed_points)
 
         fig = add_nullclines(
             fig,
@@ -107,6 +115,14 @@ if st.button("Plot"):
         fig = apply_axis_limits(fig, X.flatten(), Y.flatten(), padding_ratio=0.03)
 
         st.plotly_chart(fig, use_container_width=True)
+
+        if show_fixed_points:
+            st.subheader("Fixed points")
+        if fixed_points:
+            for i, (xp, yp) in enumerate(fixed_points, start=1):
+                st.write(f"{i}. ({xp:.6g}, {yp:.6g})")
+        else:
+            st.write("No symbolic real fixed points found.")
 
         st.subheader("Parsed system")
         st.latex(r"\dot{x} = " + str(f_expr))

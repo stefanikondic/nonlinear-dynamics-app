@@ -19,7 +19,7 @@ from core.plotting import (
     create_phase_figure,
     create_streamline_figure,
 )
-from core.analysis import find_fixed_points_symbolic
+from core.analysis import find_fixed_points_numeric
 
 st.title("Nonlinear Dynamics App")
 st.caption("Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi.")
@@ -48,6 +48,7 @@ show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=False)
 st.subheader("Nullclines")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
+fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
 
@@ -121,11 +122,17 @@ if st.button("Plot"):
 
         fixed_points = []
         if show_fixed_points:
-            fixed_points, non_isolated = find_fixed_points_symbolic(f_expr, g_expr)
-            if non_isolated:
-                st.warning("Fixed points are not isolated (form a curve or manifold).")
-            if fixed_points:
-                fig = add_fixed_points(fig, fixed_points)
+            fixed_points = find_fixed_points_numeric(
+                f_expr,
+                g_expr,
+                xmin,
+                xmax,
+                ymin,
+                ymax,
+                nx_guess=fp_grid_density,
+                ny_guess=fp_grid_density,
+            )
+            fig = add_fixed_points(fig, fixed_points)
 
         fig = add_nullclines_from_contours(
             fig,
@@ -165,16 +172,18 @@ if st.button("Plot"):
 
         st.plotly_chart(fig, width="stretch")
 
-        if show_fixed_points and fixed_points:
+        if show_fixed_points:
             st.subheader("Fixed points")
-            for i, (xp, yp) in enumerate(fixed_points, start=1):
-                fx_val = f_num(xp, yp)
-                gy_val = g_num(xp, yp)
-                st.write(
-                    f"{i}. ({xp:.10g}, {yp:.10g}) | " f"f={fx_val:.3e}, g={gy_val:.3e}"
-                )
+            if fixed_points:
+                for i, (xp, yp) in enumerate(fixed_points, start=1):
+                    fx_val = f_num(xp, yp)
+                    gy_val = g_num(xp, yp)
+                    st.write(
+                        f"{i}. ({xp:.10g}, {yp:.10g}) | "
+                        f"f={fx_val:.3e}, g={gy_val:.3e}"
+                    )
         else:
-            st.write("No symbolic real fixed points found.")
+            st.write("No fixed points found in the selected domain.")
 
         st.subheader("Parsed system")
         st.latex(r"\dot{x} = " + str(f_expr))

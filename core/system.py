@@ -53,3 +53,13 @@ def integrate_trajectory(f, g, x0, y0, t_span=(0, 20), n_points=1000):
     )
 
     return sol.y[0], sol.y[1]
+
+
+def normalize_vector_field(U, V, eps=1e-12):
+    magnitude = np.sqrt(U**2 + V**2)
+    magnitude[magnitude < eps] = 1.0  # izbjegni dijeljenje nulom
+
+    U_norm = U / magnitude
+    V_norm = V / magnitude
+
+    return U_norm, V_norm

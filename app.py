@@ -9,6 +9,7 @@ from core.system import (
     create_mesh,
     compute_vector_field,
     integrate_trajectory,
+    normalize_vector_field,
 )
 from core.plotting import (
     add_fixed_points,
@@ -65,6 +66,8 @@ def parse_initial_conditions(text):
     return initial_conditions
 
 
+stride = st.slider("Vector field density (stride)", 1, 5, 2)
+
 if st.button("Plot"):
     try:
         f_expr, g_expr, f_num, g_num = parse_system(f_str, g_str)
@@ -72,6 +75,7 @@ if st.button("Plot"):
 
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
         U, V = compute_vector_field(f_num, g_num, X, Y)
+        U, V = normalize_vector_field(U, V)
 
         Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
         Fn, Gn = compute_scalar_fields(f_num, g_num, Xn, Yn)
@@ -87,7 +91,7 @@ if st.button("Plot"):
                 "Some scalar-field values are undefined on this domain, so nullclines may be incomplete."
             )
 
-        fig = create_phase_figure(X, Y, U, V)
+        fig = create_phase_figure(X, Y, U, V, stride=stride)
 
         fixed_points = []
         if show_fixed_points:

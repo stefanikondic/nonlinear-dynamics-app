@@ -14,9 +14,10 @@ from core.system import (
 from core.plotting import (
     add_fixed_points,
     add_nullclines_from_contours,
-    create_phase_figure,
     add_trajectory,
     apply_axis_limits,
+    create_phase_figure,
+    create_streamline_figure,
 )
 from core.analysis import find_fixed_points_symbolic
 
@@ -24,6 +25,11 @@ st.title("Nonlinear Dynamics App")
 st.caption("Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi.")
 f_str = st.text_input("dx/dt =", "y")
 g_str = st.text_input("dy/dt =", "-x")
+
+st.subheader("Initial conditions")
+ics_text = st.text_area(
+    "Enter one initial condition per line as: x0, y0", value="1, 0\n-1, 1\n2, -2"
+)
 
 st.subheader("Domain")
 xmin = st.number_input("xmin", value=-5.0)
@@ -37,10 +43,6 @@ st.subheader("Integration")
 t_max = st.number_input("t_max", value=20.0, min_value=0.1)
 n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
 
-st.subheader("Initial conditions")
-ics_text = st.text_area(
-    "Enter one initial condition per line as: x0, y0", value="1, 0\n-1, 1\n2, -2"
-)
 
 show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=False)
@@ -48,6 +50,8 @@ st.subheader("Nullclines")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
+
+# if show_x_nullcline or show_y_nullcline:
 nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
 
 
@@ -68,6 +72,16 @@ def parse_initial_conditions(text):
 
 stride = st.slider("Vector field density (stride)", 1, 5, 2)
 normalize_vectors = st.checkbox("Normalize vector field", value=True)
+
+field_style = st.radio(
+    "Vector field style",
+    ["Arrows", "Streamlines"],
+    index=0,
+)
+
+if field_style == "Streamlines":
+    streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
+    streamline_arrow_scale = st.slider("Streamline arrow scale", 0.02, 0.2, 0.09, 0.01)
 
 if st.button("Plot"):
     try:
@@ -93,7 +107,17 @@ if st.button("Plot"):
                 "Some scalar-field values are undefined on this domain, so nullclines may be incomplete."
             )
 
-        fig = create_phase_figure(X, Y, U, V, stride=stride)
+        if field_style == "Arrows":
+            fig = create_phase_figure(X, Y, U, V, stride=stride)
+        else:
+            fig = create_streamline_figure(
+                X,
+                Y,
+                U,
+                V,
+                density=streamline_density,
+                arrow_scale=streamline_arrow_scale,
+            )
 
         fixed_points = []
         if show_fixed_points:

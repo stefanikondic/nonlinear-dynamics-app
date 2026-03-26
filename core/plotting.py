@@ -2,6 +2,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.figure_factory import create_quiver
 import matplotlib.pyplot as plt
+from plotly.figure_factory import create_streamline
 
 
 def compute_axis_limits(x_values, y_values, padding_ratio=0.08):
@@ -156,4 +157,28 @@ def add_nullclines_from_contours(
                 )
             )
 
+    return fig
+
+
+def create_streamline_figure(X, Y, U, V, density=1.0, arrow_scale=0.09):
+    x = X[0, :]
+    y = Y[:, 0]
+
+    fig = create_streamline(
+        x=x,
+        y=y,
+        u=U,
+        v=V,
+        density=density,
+        arrow_scale=arrow_scale,
+    )
+
+    fig.update_layout(
+        title="Phase portrait",
+        xaxis_title="x",
+        yaxis_title="y",
+        template="plotly_white",
+    )
+
+    fig.update_yaxes(scaleanchor="x", scaleratio=1)
     return fig

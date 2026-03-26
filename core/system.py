@@ -1,5 +1,5 @@
-from scipy.integrate import solve_ivp
 import numpy as np
+from scipy.integrate import solve_ivp
 
 
 def create_mesh(xmin=-5, xmax=5, ymin=-5, ymax=5, nx=20, ny=20):
@@ -9,24 +9,33 @@ def create_mesh(xmin=-5, xmax=5, ymin=-5, ymax=5, nx=20, ny=20):
     return X, Y
 
 
+def safe_evaluate(func, X, Y):
+    with np.errstate(all="ignore"):
+        Z = func(X, Y)
+    return np.asarray(Z, dtype=float)
+
+
 def compute_vector_field(f, g, X, Y):
-    U = f(X, Y)
-    V = g(X, Y)
+    U = safe_evaluate(f, X, Y)
+    V = safe_evaluate(g, X, Y)
     return U, V
 
 
 def compute_scalar_fields(f, g, X, Y):
-    F = f(X, Y)
-    G = g(X, Y)
+    F = safe_evaluate(f, X, Y)
+    G = safe_evaluate(g, X, Y)
     return F, G
 
 
 def integrate_trajectory(f, g, x0, y0, t_span=(0, 20), n_points=1000):
     def rhs(t, z):
         x, y = z
-        return [f(x, y), g(x, y)]
+        dx = f(x, y)
+        dy = g(x, y)
+        return [dx, dy]
 
     t_eval = np.linspace(t_span[0], t_span[1], n_points)
+
     sol = solve_ivp(
         rhs,
         t_span,

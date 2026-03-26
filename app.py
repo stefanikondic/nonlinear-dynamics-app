@@ -1,5 +1,7 @@
 import streamlit as st
 import numpy as np
+import traceback
+
 
 from core.parser import parse_system
 from core.system import (
@@ -18,9 +20,9 @@ from core.plotting import (
 from core.analysis import find_fixed_points_symbolic
 
 st.title("Nonlinear Dynamics App")
-
-f_str = st.text_input("dx/dt =", "y - y**3")
-g_str = st.text_input("dy/dt =", "-x - y**2")
+st.caption("Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi.")
+f_str = st.text_input("dx/dt =", "y")
+g_str = st.text_input("dy/dt =", "-x")
 
 st.subheader("Domain")
 xmin = st.number_input("xmin", value=-5.0)
@@ -28,7 +30,7 @@ xmax = st.number_input("xmax", value=5.0)
 ymin = st.number_input("ymin", value=-5.0)
 ymax = st.number_input("ymax", value=5.0)
 
-n = st.slider("Grid density", 10, 50, 20)
+n = st.slider("Grid density", 10, 50, 40)
 
 st.subheader("Integration")
 t_max = st.number_input("t_max", value=20.0, min_value=0.1)
@@ -43,8 +45,8 @@ show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=True)
 st.subheader("Nullclines")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
-show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=True)
-show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=True)
+show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
+show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
 nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
 
 
@@ -74,7 +76,16 @@ if st.button("Plot"):
         Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
         Fn, Gn = compute_scalar_fields(f_num, g_num, Xn, Yn)
 
-        fig = create_phase_figure(X, Y, U, V)
+        if not np.isfinite(U).any() or not np.isfinite(V).any():
+            st.warning(
+                "Vector field could not be evaluated on the chosen domain. "
+                "The system may be outside its domain there, e.g. log(x) for x <= 0 or sqrt(x) for x < 0."
+            )
+
+        if not np.isfinite(Fn).any() or not np.isfinite(Gn).any():
+            st.warning(
+                "Some scalar-field values are undefined on this domain, so nullclines may be incomplete."
+            )
 
         fig = create_phase_figure(X, Y, U, V)
 
@@ -119,7 +130,7 @@ if st.button("Plot"):
         # fig = apply_axis_limits(fig, all_x, all_y, padding_ratio=0.06)
         fig = apply_axis_limits(fig, X.flatten(), Y.flatten(), padding_ratio=0.03)
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         if show_fixed_points and fixed_points:
             st.subheader("Fixed points")
@@ -137,4 +148,6 @@ if st.button("Plot"):
         st.latex(r"\dot{y} = " + str(g_expr))
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(str(e))
+        with st.expander("Technical details"):
+            st.code(traceback.format_exc())

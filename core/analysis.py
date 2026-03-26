@@ -64,7 +64,6 @@ def find_fixed_points_numeric(
                 if not point_in_domain(px, py, xmin, xmax, ymin, ymax):
                     continue
 
-                # provjera da je stvarno rješenje
                 fx_val = complex(sp.N(f_expr.subs({x: px, y: py})))
                 gy_val = complex(sp.N(g_expr.subs({x: px, y: py})))
 
@@ -80,3 +79,66 @@ def find_fixed_points_numeric(
     found_points.sort(key=lambda p: (p[0], p[1]))
 
     return found_points
+
+
+def compute_jacobian_symbolic(f_expr, g_expr):
+    return sp.Matrix([f_expr, g_expr]).jacobian([x, y])
+
+
+def evaluate_jacobian_at_point(jacobian_expr, px, py):
+    J_eval = jacobian_expr.subs({x: px, y: py})
+    J_eval = np.array(J_eval.evalf(), dtype=float)
+    return J_eval
+
+
+def classify_fixed_point(eigenvalues, tol=1e-8):
+    eigs = np.array(eigenvalues, dtype=complex)
+
+    real_parts = np.real(eigs)
+    imag_parts = np.imag(eigs)
+
+    if np.any(np.abs(real_parts) < tol) and np.any(np.abs(imag_parts) < tol):
+        return "degenerate"
+
+    if real_parts[0] * real_parts[1] < -tol:
+        return "saddle"
+
+    if np.all(np.abs(imag_parts) < tol):
+        if np.all(real_parts < -tol):
+            return "stable node"
+        if np.all(real_parts > tol):
+            return "unstable node"
+        if np.any(np.abs(real_parts) < tol):
+            return "degenerate"
+
+    if np.any(np.abs(imag_parts) > tol):
+        if np.all(real_parts < -tol):
+            return "stable spiral"
+        if np.all(real_parts > tol):
+            return "unstable spiral"
+        if np.all(np.abs(real_parts) < tol):
+            return "center"
+        return "degenerate"
+
+    return "degenerate"
+
+
+def analyze_fixed_points(f_expr, g_expr, fixed_points):
+    jacobian_expr = compute_jacobian_symbolic(f_expr, g_expr)
+    results = []
+
+    for px, py in fixed_points:
+        J = evaluate_jacobian_at_point(jacobian_expr, px, py)
+        eigenvalues = np.linalg.eigvals(J)
+        classification = classify_fixed_point(eigenvalues)
+
+        results.append(
+            {
+                "point": (px, py),
+                "jacobian": J,
+                "eigenvalues": eigenvalues,
+                "classification": classification,
+            }
+        )
+
+    return jacobian_expr, results

@@ -34,14 +34,20 @@ def apply_axis_limits(fig, x_values, y_values, padding_ratio=0.08):
     return fig
 
 
-def create_phase_figure(X, Y, U, V):
+def create_phase_figure(X, Y, U, V, stride=2):
+    # ↓↓↓ OVDJE IDE STRIDE ↓↓↓
+    X_plot = X[::stride, ::stride]
+    Y_plot = Y[::stride, ::stride]
+    U_plot = U[::stride, ::stride]
+    V_plot = V[::stride, ::stride]
+
     fig = create_quiver(
-        X.flatten(),
-        Y.flatten(),
-        U.flatten(),
-        V.flatten(),
-        scale=0.15,
-        arrow_scale=0.3,
+        X_plot.flatten(),
+        Y_plot.flatten(),
+        U_plot.flatten(),
+        V_plot.flatten(),
+        scale=0.2,
+        arrow_scale=0.4,
         name="Vector field",
     )
 

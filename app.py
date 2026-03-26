@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import traceback
+import sympy as sp
 
 
 from core.parser import parse_system
@@ -19,7 +20,7 @@ from core.plotting import (
     create_phase_figure,
     create_streamline_figure,
 )
-from core.analysis import find_fixed_points_numeric
+from core.analysis import find_fixed_points_numeric, analyze_fixed_points
 
 st.title("Nonlinear Dynamics App")
 st.caption("Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi.")
@@ -37,7 +38,7 @@ xmax = st.number_input("xmax", value=5.0)
 ymin = st.number_input("ymin", value=-5.0)
 ymax = st.number_input("ymax", value=5.0)
 
-n = st.slider("Grid density", 10, 50, 40)
+n = st.slider("Grid density", 10, 100, 40)
 
 st.subheader("Integration")
 t_max = st.number_input("t_max", value=20.0, min_value=0.1)
@@ -48,6 +49,7 @@ show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=False)
 st.subheader("Nullclines")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
+show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
 fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
@@ -134,6 +136,16 @@ if st.button("Plot"):
             )
             fig = add_fixed_points(fig, fixed_points)
 
+        jacobian_expr = None
+        fixed_point_analysis = []
+
+        if show_fixed_points and show_fixed_point_analysis and fixed_points:
+            jacobian_expr, fixed_point_analysis = analyze_fixed_points(
+                f_expr,
+                g_expr,
+                fixed_points,
+            )
+
         fig = add_nullclines_from_contours(
             fig,
             Xn,
@@ -174,6 +186,7 @@ if st.button("Plot"):
 
         if show_fixed_points:
             st.subheader("Fixed points")
+
             if fixed_points:
                 for i, (xp, yp) in enumerate(fixed_points, start=1):
                     fx_val = f_num(xp, yp)
@@ -182,8 +195,32 @@ if st.button("Plot"):
                         f"{i}. ({xp:.10g}, {yp:.10g}) | "
                         f"f={fx_val:.3e}, g={gy_val:.3e}"
                     )
-        else:
-            st.write("No fixed points found in the selected domain.")
+            else:
+                st.write("No fixed points found in the selected domain.")
+
+            if show_fixed_points and show_fixed_point_analysis and fixed_point_analysis:
+                st.subheader("Jacobian and classification")
+
+                st.write("Symbolic Jacobian:")
+                st.latex("J(x,y) = " + sp.latex(jacobian_expr))
+
+                for i, result in enumerate(fixed_point_analysis, start=1):
+                    px, py = result["point"]
+                    J = result["jacobian"]
+                    eigs = result["eigenvalues"]
+                    classification = result["classification"]
+
+                    st.markdown(f"**Point {i}: ({px:.6g}, {py:.6g})**")
+                    st.write("Jacobian:")
+                    st.code(np.array2string(J, precision=6, suppress_small=True))
+
+                    eig1, eig2 = eigs[0], eigs[1]
+                    st.write(
+                        "Eigenvalues:",
+                        f"{eig1.real:.6g}{eig1.imag:+.6g}j, "
+                        f"{eig2.real:.6g}{eig2.imag:+.6g}j",
+                    )
+                    st.write("Classification:", classification)
 
         st.subheader("Parsed system")
         st.latex(r"\dot{x} = " + str(f_expr))

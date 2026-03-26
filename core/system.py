@@ -12,7 +12,13 @@ def create_mesh(xmin=-5, xmax=5, ymin=-5, ymax=5, nx=20, ny=20):
 def safe_evaluate(func, X, Y):
     with np.errstate(all="ignore"):
         Z = func(X, Y)
-    return np.asarray(Z, dtype=float)
+
+    if np.isscalar(Z):
+        Z = np.full_like(X, Z, dtype=float)
+    else:
+        Z = np.asarray(Z, dtype=float)
+
+    return Z
 
 
 def compute_vector_field(f, g, X, Y):

@@ -43,7 +43,7 @@ ics_text = st.text_area(
 )
 
 show_forward = st.checkbox("Show forward trajectories", value=True)
-show_backward = st.checkbox("Show backward trajectories", value=True)
+show_backward = st.checkbox("Show backward trajectories", value=False)
 st.subheader("Nullclines")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
@@ -67,6 +67,7 @@ def parse_initial_conditions(text):
 
 
 stride = st.slider("Vector field density (stride)", 1, 5, 2)
+normalize_vectors = st.checkbox("Normalize vector field", value=True)
 
 if st.button("Plot"):
     try:
@@ -75,7 +76,8 @@ if st.button("Plot"):
 
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
         U, V = compute_vector_field(f_num, g_num, X, Y)
-        U, V = normalize_vector_field(U, V)
+        if normalize_vectors:
+            U, V = normalize_vector_field(U, V)
 
         Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
         Fn, Gn = compute_scalar_fields(f_num, g_num, Xn, Yn)

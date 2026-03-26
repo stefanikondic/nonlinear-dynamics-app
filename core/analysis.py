@@ -1,17 +1,25 @@
 import sympy as sp
-import numpy as np
-
-
-x, y = sp.symbols("x y")
 
 
 def find_fixed_points_symbolic(f_expr, g_expr):
-    solutions = sp.solve((f_expr, g_expr), (x, y), dict=True)
+    x, y = sp.symbols("x y")
+
+    solutions = sp.solve([f_expr, g_expr], (x, y), dict=True)
+
     fixed_points = []
+    non_isolated = False
 
     for sol in solutions:
+        if x not in sol or y not in sol:
+            non_isolated = True
+            continue
+
         x_val = sol[x]
         y_val = sol[y]
+
+        if not x_val.is_number or not y_val.is_number:
+            non_isolated = True
+            continue
 
         if x_val.is_real is False or y_val.is_real is False:
             continue
@@ -22,19 +30,4 @@ def find_fixed_points_symbolic(f_expr, g_expr):
         if abs(x_num.imag) < 1e-10 and abs(y_num.imag) < 1e-10:
             fixed_points.append((float(x_num.real), float(y_num.real)))
 
-    return remove_duplicate_points(fixed_points)
-
-
-def remove_duplicate_points(points, tol=1e-8):
-    unique = []
-
-    for px, py in points:
-        is_new = True
-        for qx, qy in unique:
-            if np.hypot(px - qx, py - qy) < tol:
-                is_new = False
-                break
-        if is_new:
-            unique.append((px, py))
-
-    return unique
+    return fixed_points, non_isolated

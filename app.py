@@ -91,8 +91,11 @@ if st.button("Plot"):
 
         fixed_points = []
         if show_fixed_points:
-            fixed_points = find_fixed_points_symbolic(f_expr, g_expr)
-            fig = add_fixed_points(fig, fixed_points)
+            fixed_points, non_isolated = find_fixed_points_symbolic(f_expr, g_expr)
+            if non_isolated:
+                st.warning("Fixed points are not isolated (form a curve or manifold).")
+            if fixed_points:
+                fig = add_fixed_points(fig, fixed_points)
 
         fig = add_nullclines_from_contours(
             fig,

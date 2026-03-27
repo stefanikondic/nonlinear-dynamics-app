@@ -68,7 +68,7 @@ with right_top:
     st.subheader("Initial conditions")
     ics_text = st.text_area(
         "Enter one initial condition per line as: x0, y0",
-        value="1, 0\n-1, 1\n2, -2",
+        value="1, 0",
         height=165,
     )
 
@@ -96,17 +96,17 @@ with right_mid:
     st.subheader("Field style")
     field_style = st.radio(
         "Vector field style",
-        ["Arrows", "Streamlines"],
+        ["Streamlines", "Arrows"],
         index=0,
         horizontal=True,
     )
     normalize_vectors = st.checkbox("Normalize vector field", value=True)
 
-    streamline_density = 1.0
+    streamline_density = 2.0
     streamline_arrow_scale = 0.09
 
     if field_style == "Streamlines":
-        streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
+        streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
         streamline_arrow_scale = st.slider(
             "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
         )

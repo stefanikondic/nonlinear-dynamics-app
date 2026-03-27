@@ -21,120 +21,23 @@ from core.plotting import (
 )
 from core.analysis import find_fixed_points_numeric, analyze_fixed_points
 
+from utils.helpers import (
+    parse_initial_conditions,
+    wrap_function,
+    substitute_parameters,
+)
+from ui.controls import get_parameter_value
+from ui.styles import apply_app_styles
+
 
 st.set_page_config(page_title="Nonlinear Dynamics App", layout="centered")
-
-st.markdown(
-    """
-    <style>
-    div.block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        max-width: 1050px;
-    }
-
-    h1 {
-        margin-bottom: 0.2rem;
-    }
-
-    h2, h3 {
-        margin-top: 0.6rem;
-        margin-bottom: 0.3rem;
-    }
-
-    div[data-testid="stTextInput"] {
-        margin-bottom: 0.35rem;
-    }
-
-    div[data-testid="stNumberInput"] {
-        margin-bottom: 0.35rem;
-    }
-
-    div[data-testid="stTextArea"] {
-        margin-bottom: 0.35rem;
-    }
-
-    div[data-testid="stSlider"] {
-        margin-bottom: 0.2rem;
-    }
-
-    div[data-testid="stRadio"] {
-        margin-bottom: 0.2rem;
-    }
-
-    div[data-testid="stCheckbox"] {
-        margin-bottom: -0.2rem;
-    }
-
-    .stButton > button {
-        width: 180px;
-        font-weight: 600;
-        border-radius: 10px;
-        padding: 0.55rem 1rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_app_styles()
 
 st.title("Nonlinear Dynamics App")
 st.caption(
     "Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi. "
     "Any symbol other than x and y is treated as a parameter."
 )
-
-
-def parse_initial_conditions(text):
-    initial_conditions = []
-    lines = text.strip().splitlines()
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-
-        x_str, y_str = line.split(",")
-        initial_conditions.append((float(x_str), float(y_str)))
-
-    return initial_conditions
-
-
-def wrap_function(func, params, param_values):
-    def wrapped(x, y):
-        param_list = [param_values[str(p)] for p in params]
-        return func(x, y, *param_list)
-
-    return wrapped
-
-
-def substitute_parameters(expr, params, param_values):
-    if not params:
-        return expr
-
-    subs_dict = {p: param_values[str(p)] for p in params}
-    return expr.subs(subs_dict)
-
-
-def parse_parameter_value(value_str, param_name):
-    try:
-        value = sp.sympify(value_str)
-        if not value.is_real:
-            raise ValueError
-        return float(value.evalf())
-    except Exception as e:
-        raise ValueError(
-            f"Invalid value for parameter '{param_name}': {value_str}"
-        ) from e
-
-
-def get_parameter_value(param_name, default="1.0"):
-    value_str = st.text_input(
-        f"{param_name}",
-        value=default,
-        key=f"{param_name}_text",
-    )
-    return parse_parameter_value(value_str, param_name)
-
 
 left_top, right_top = st.columns([1, 1], gap="large")
 
@@ -165,7 +68,7 @@ with right_top:
     st.subheader("Initial conditions")
     ics_text = st.text_area(
         "Enter one initial condition per line as: x0, y0",
-        value="1, 0",
+        value="1, 0\n-1, 1\n2, -2",
         height=165,
     )
 

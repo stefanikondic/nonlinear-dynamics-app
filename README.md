@@ -4,7 +4,7 @@ Interactive web application for exploring **2D nonlinear dynamical systems** thr
 
 ---
 
-## ✨ What this app does
+## What this app does
 
 This tool allows you to define a dynamical system of the form:
 
@@ -16,17 +16,17 @@ and interactively explore its behavior.
 
 ### Features
 
-* 📈 Phase portraits (vector fields and streamlines)
-* 🔁 Trajectories from arbitrary initial conditions
-* 📍 Automatic detection of fixed points
-* 🔬 Linear stability analysis (Jacobian + eigenvalues)
-* ➖ Nullclines visualization
-* ⚙️ Automatic detection of parameters in equations
-* 🎛️ Manual parameter input
+* Phase portraits (vector fields and streamlines)
+* Trajectories from arbitrary initial conditions
+* Automatic detection of fixed points
+* Linear stability analysis (Jacobian + eigenvalues)
+* Nullclines visualization
+* Automatic detection of parameters in equations
+* Manual parameter input
 
 ---
 
-## 🧠 Intended use
+## Intended use
 
 * learning nonlinear dynamics
 * building intuition for differential equations
@@ -35,7 +35,7 @@ and interactively explore its behavior.
 
 ---
 
-## 🚀 Getting started (using Conda)
+## Getting started (using Conda)
 
 This project uses a **Conda environment** defined in `env.yml`.
 
@@ -89,7 +89,7 @@ http://localhost:8501
 
 ---
 
-## 🧪 Example systems
+## Example systems
 
 ### Linear oscillator
 
@@ -126,9 +126,9 @@ The app will automatically detect `r`.
 
 ---
 
-## 🏗️ Project status
+## Project status
 
-🚧 **Work in progress**
+ **Work in progress**
 
 This repository is being made public while still under active development.
 

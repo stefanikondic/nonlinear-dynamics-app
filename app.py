@@ -22,14 +22,66 @@ from core.plotting import (
 from core.analysis import find_fixed_points_numeric, analyze_fixed_points
 
 
+st.set_page_config(page_title="Nonlinear Dynamics App", layout="centered")
+
+st.markdown(
+    """
+    <style>
+    div.block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1050px;
+    }
+
+    h1 {
+        margin-bottom: 0.2rem;
+    }
+
+    h2, h3 {
+        margin-top: 0.6rem;
+        margin-bottom: 0.3rem;
+    }
+
+    div[data-testid="stTextInput"] {
+        margin-bottom: 0.35rem;
+    }
+
+    div[data-testid="stNumberInput"] {
+        margin-bottom: 0.35rem;
+    }
+
+    div[data-testid="stTextArea"] {
+        margin-bottom: 0.35rem;
+    }
+
+    div[data-testid="stSlider"] {
+        margin-bottom: 0.2rem;
+    }
+
+    div[data-testid="stRadio"] {
+        margin-bottom: 0.2rem;
+    }
+
+    div[data-testid="stCheckbox"] {
+        margin-bottom: -0.2rem;
+    }
+
+    .stButton > button {
+        width: 180px;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 0.55rem 1rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Nonlinear Dynamics App")
 st.caption(
     "Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi. "
     "Any symbol other than x and y is treated as a parameter."
 )
-
-f_str = st.text_input("dx/dt =", "y")
-g_str = st.text_input("dy/dt =", "-x")
 
 
 def parse_initial_conditions(text):
@@ -84,71 +136,96 @@ def get_parameter_value(param_name, default="1.0"):
     return parse_parameter_value(value_str, param_name)
 
 
-parse_ok = False
-parse_error = None
-f_expr = g_expr = f_num = g_num = None
-params = []
+left_top, right_top = st.columns([1, 1], gap="large")
 
-try:
-    f_expr, g_expr, f_num, g_num, params = parse_system(f_str, g_str)
-    parse_ok = True
-except Exception as e:
-    parse_error = str(e)
+with left_top:
+    st.subheader("System")
+    f_str = st.text_input("dx/dt =", "y")
+    g_str = st.text_input("dy/dt =", "-x")
 
-param_values = {}
-if parse_ok and params:
-    st.subheader("Parameters")
-    for p in params:
-        name = str(p)
-        param_values[name] = get_parameter_value(name, default="1.0")
+    parse_ok = False
+    parse_error = None
+    f_expr = g_expr = f_num = g_num = None
+    params = []
 
+    try:
+        f_expr, g_expr, f_num, g_num, params = parse_system(f_str, g_str)
+        parse_ok = True
+    except Exception as e:
+        parse_error = str(e)
 
-st.subheader("Initial conditions")
-ics_text = st.text_area(
-    "Enter one initial condition per line as: x0, y0",
-    value="1, 1",
-)
+    param_values = {}
+    if parse_ok and params:
+        st.subheader("Parameters")
+        for p in params:
+            name = str(p)
+            param_values[name] = get_parameter_value(name, default="1.0")
 
-st.subheader("Domain and grid")
-xmin = st.number_input("x_min", value=-3.0)
-xmax = st.number_input("x_max", value=3.0)
-ymin = st.number_input("y_min", value=-3.0)
-ymax = st.number_input("y_max", value=3.0)
-n = st.slider("Grid density", 10, 100, 40)
-stride = st.slider("Vector field density (stride)", 1, 5, 2)
-
-st.subheader("Integration")
-t_max = st.number_input("t_max", value=20.0, min_value=0.1)
-n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
-show_forward = st.checkbox("Show forward trajectories", value=True)
-show_backward = st.checkbox("Show backward trajectories", value=False)
-
-st.subheader("Fixed points")
-show_fixed_points = st.checkbox("Show fixed points", value=True)
-show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
-fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
-
-st.subheader("Nullclines")
-show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
-show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
-nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
-
-field_style = st.radio(
-    "Vector field style",
-    ["Arrows", "Streamlines"],
-    index=0,
-)
-
-normalize_vectors = st.checkbox("Normalize vector field", value=True)
-
-if field_style == "Streamlines":
-    streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
-    streamline_arrow_scale = st.slider("Streamline arrow scale", 0.02, 0.2, 0.09, 0.01)
+with right_top:
+    st.subheader("Initial conditions")
+    ics_text = st.text_area(
+        "Enter one initial condition per line as: x0, y0",
+        value="1, 0",
+        height=165,
+    )
 
 if parse_error:
     st.error(parse_error)
 
-if st.button(label="PLOT", type="primary"):
+left_mid, right_mid = st.columns([1, 1], gap="large")
+
+with left_mid:
+    st.subheader("Domain and grid")
+    xmin = st.number_input("x_min", value=-3.0)
+    xmax = st.number_input("x_max", value=3.0)
+    ymin = st.number_input("y_min", value=-3.0)
+    ymax = st.number_input("y_max", value=3.0)
+    n = st.slider("Grid density", 10, 100, 40)
+    stride = st.slider("Vector field density (stride)", 1, 5, 2)
+
+with right_mid:
+    st.subheader("Integration")
+    t_max = st.number_input("t_max", value=20.0, min_value=0.1)
+    n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
+    show_forward = st.checkbox("Show forward trajectories", value=True)
+    show_backward = st.checkbox("Show backward trajectories", value=False)
+
+    st.subheader("Field style")
+    field_style = st.radio(
+        "Vector field style",
+        ["Arrows", "Streamlines"],
+        index=0,
+        horizontal=True,
+    )
+    normalize_vectors = st.checkbox("Normalize vector field", value=True)
+
+    streamline_density = 1.0
+    streamline_arrow_scale = 0.09
+
+    if field_style == "Streamlines":
+        streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
+        streamline_arrow_scale = st.slider(
+            "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
+        )
+
+left_bottom, right_bottom = st.columns([1, 1], gap="large")
+
+with left_bottom:
+    st.subheader("Fixed points")
+    show_fixed_points = st.checkbox("Show fixed points", value=True)
+    show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
+    fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
+
+with right_bottom:
+    st.subheader("Nullclines")
+    show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
+    show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
+    nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
+
+st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
+plot_clicked = st.button(label="PLOT", type="primary")
+
+if plot_clicked:
     try:
         if not parse_ok:
             raise ValueError(parse_error or "System could not be parsed.")
@@ -259,9 +336,9 @@ if st.button(label="PLOT", type="primary"):
         all_x = np.concatenate(all_x)
         all_y = np.concatenate(all_y)
 
-        # fig = apply_axis_limits(fig, all_x, all_y, padding_ratio=0.06)
         fig = apply_axis_limits(fig, X.flatten(), Y.flatten(), padding_ratio=0.03)
 
+        st.markdown("---")
         st.plotly_chart(fig, width="stretch")
 
         if show_fixed_points:
@@ -302,20 +379,23 @@ if st.button(label="PLOT", type="primary"):
                     )
                     st.write("Classification:", classification)
 
-        st.subheader("Parsed system")
-        st.latex(r"\dot{x} = " + sp.latex(f_expr))
+        info_left, info_right = st.columns([1, 1], gap="large")
 
-        st.latex(r"\dot{y} = " + sp.latex(g_expr))
+        with info_left:
+            st.subheader("Parsed system")
+            st.latex(r"\dot{x} = " + sp.latex(f_expr))
+            st.latex(r"\dot{y} = " + sp.latex(g_expr))
 
-        if params:
-            st.subheader("Parameter values used")
-            for p in params:
-                name = str(p)
-                st.write(f"{name} = {param_values[name]:.10g}")
+            if params:
+                st.subheader("Parameter values used")
+                for p in params:
+                    name = str(p)
+                    st.write(f"{name} = {param_values[name]:.10g}")
 
-        st.subheader("Evaluated system")
-        st.latex(r"\dot{x} = " + sp.latex(f_expr_eval))
-        st.latex(r"\dot{y} = " + sp.latex(g_expr_eval))
+        with info_right:
+            st.subheader("Evaluated system")
+            st.latex(r"\dot{x} = " + sp.latex(f_expr_eval))
+            st.latex(r"\dot{y} = " + sp.latex(g_expr_eval))
 
     except Exception as e:
         st.error(str(e))

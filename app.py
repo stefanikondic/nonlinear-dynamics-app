@@ -32,29 +32,30 @@ ics_text = st.text_area(
     "Enter one initial condition per line as: x0, y0", value="1, 0\n-1, 1\n2, -2"
 )
 
-st.subheader("Domain")
-xmin = st.number_input("xmin", value=-5.0)
-xmax = st.number_input("xmax", value=5.0)
-ymin = st.number_input("ymin", value=-5.0)
-ymax = st.number_input("ymax", value=5.0)
-
+st.subheader("Domain and grid")
+xmin = st.number_input(r"$x_{\min}$", value=-3.0)
+xmax = st.number_input(r"$x_{\max}$", value=3.0)
+ymin = st.number_input(r"$y_{\min}$", value=-3.0)
+ymax = st.number_input(r"$y_{\max}$", value=3.0)
 n = st.slider("Grid density", 10, 100, 40)
+stride = st.slider("Vector field density (stride)", 1, 5, 2)
+
 
 st.subheader("Integration")
-t_max = st.number_input("t_max", value=20.0, min_value=0.1)
+t_max = st.number_input(r"$t_{\max}$", value=20.0, min_value=0.1)
 n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
-
-
 show_forward = st.checkbox("Show forward trajectories", value=True)
 show_backward = st.checkbox("Show backward trajectories", value=False)
-st.subheader("Nullclines")
+
+st.subheader("Fixed points")
 show_fixed_points = st.checkbox("Show fixed points", value=True)
 show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
 fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
+
+
+st.subheader("Nullclines")
 show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
 show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
-
-# if show_x_nullcline or show_y_nullcline:
 nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
 
 
@@ -73,20 +74,20 @@ def parse_initial_conditions(text):
     return initial_conditions
 
 
-stride = st.slider("Vector field density (stride)", 1, 5, 2)
-normalize_vectors = st.checkbox("Normalize vector field", value=True)
-
 field_style = st.radio(
     "Vector field style",
     ["Arrows", "Streamlines"],
     index=0,
 )
 
+normalize_vectors = st.checkbox("Normalize vector field", value=True)
+
+
 if field_style == "Streamlines":
     streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
     streamline_arrow_scale = st.slider("Streamline arrow scale", 0.02, 0.2, 0.09, 0.01)
 
-if st.button("Plot"):
+if st.button(label="PLOT", type="primary"):
     try:
         f_expr, g_expr, f_num, g_num = parse_system(f_str, g_str)
         initial_conditions = parse_initial_conditions(ics_text)

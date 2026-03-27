@@ -3,7 +3,6 @@ import numpy as np
 import traceback
 import sympy as sp
 
-
 from core.parser import parse_system
 from core.system import (
     compute_scalar_fields,
@@ -22,41 +21,15 @@ from core.plotting import (
 )
 from core.analysis import find_fixed_points_numeric, analyze_fixed_points
 
-st.title("Nonlinear Dynamics App")
-st.caption("Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi.")
-f_str = st.text_input("dx/dt =", "y")
-g_str = st.text_input("dy/dt =", "-x")
 
-st.subheader("Initial conditions")
-ics_text = st.text_area(
-    "Enter one initial condition per line as: x0, y0", value="1, 0\n-1, 1\n2, -2"
+st.title("Nonlinear Dynamics App")
+st.caption(
+    "Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi. "
+    "Any symbol other than x and y is treated as a parameter."
 )
 
-st.subheader("Domain and grid")
-xmin = st.number_input(r"$x_{\min}$", value=-3.0)
-xmax = st.number_input(r"$x_{\max}$", value=3.0)
-ymin = st.number_input(r"$y_{\min}$", value=-3.0)
-ymax = st.number_input(r"$y_{\max}$", value=3.0)
-n = st.slider("Grid density", 10, 100, 40)
-stride = st.slider("Vector field density (stride)", 1, 5, 2)
-
-
-st.subheader("Integration")
-t_max = st.number_input(r"$t_{\max}$", value=20.0, min_value=0.1)
-n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
-show_forward = st.checkbox("Show forward trajectories", value=True)
-show_backward = st.checkbox("Show backward trajectories", value=False)
-
-st.subheader("Fixed points")
-show_fixed_points = st.checkbox("Show fixed points", value=True)
-show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
-fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
-
-
-st.subheader("Nullclines")
-show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
-show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
-nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
+f_str = st.text_input("dx/dt =", "y")
+g_str = st.text_input("dy/dt =", "-x")
 
 
 def parse_initial_conditions(text):
@@ -74,6 +47,92 @@ def parse_initial_conditions(text):
     return initial_conditions
 
 
+def wrap_function(func, params, param_values):
+    def wrapped(x, y):
+        param_list = [param_values[str(p)] for p in params]
+        return func(x, y, *param_list)
+
+    return wrapped
+
+
+def substitute_parameters(expr, params, param_values):
+    if not params:
+        return expr
+
+    subs_dict = {p: param_values[str(p)] for p in params}
+    return expr.subs(subs_dict)
+
+
+def parse_parameter_value(value_str, param_name):
+    try:
+        value = sp.sympify(value_str)
+        if not value.is_real:
+            raise ValueError
+        return float(value.evalf())
+    except Exception as e:
+        raise ValueError(
+            f"Invalid value for parameter '{param_name}': {value_str}"
+        ) from e
+
+
+def get_parameter_value(param_name, default="1.0"):
+    value_str = st.text_input(
+        f"{param_name}",
+        value=default,
+        key=f"{param_name}_text",
+    )
+    return parse_parameter_value(value_str, param_name)
+
+
+parse_ok = False
+parse_error = None
+f_expr = g_expr = f_num = g_num = None
+params = []
+
+try:
+    f_expr, g_expr, f_num, g_num, params = parse_system(f_str, g_str)
+    parse_ok = True
+except Exception as e:
+    parse_error = str(e)
+
+param_values = {}
+if parse_ok and params:
+    st.subheader("Parameters")
+    for p in params:
+        name = str(p)
+        param_values[name] = get_parameter_value(name, default="1.0")
+
+
+st.subheader("Initial conditions")
+ics_text = st.text_area(
+    "Enter one initial condition per line as: x0, y0",
+    value="1, 1",
+)
+
+st.subheader("Domain and grid")
+xmin = st.number_input("x_min", value=-3.0)
+xmax = st.number_input("x_max", value=3.0)
+ymin = st.number_input("y_min", value=-3.0)
+ymax = st.number_input("y_max", value=3.0)
+n = st.slider("Grid density", 10, 100, 40)
+stride = st.slider("Vector field density (stride)", 1, 5, 2)
+
+st.subheader("Integration")
+t_max = st.number_input("t_max", value=20.0, min_value=0.1)
+n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
+show_forward = st.checkbox("Show forward trajectories", value=True)
+show_backward = st.checkbox("Show backward trajectories", value=False)
+
+st.subheader("Fixed points")
+show_fixed_points = st.checkbox("Show fixed points", value=True)
+show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
+fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
+
+st.subheader("Nullclines")
+show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
+show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
+nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
+
 field_style = st.radio(
     "Vector field style",
     ["Arrows", "Streamlines"],
@@ -82,23 +141,33 @@ field_style = st.radio(
 
 normalize_vectors = st.checkbox("Normalize vector field", value=True)
 
-
 if field_style == "Streamlines":
     streamline_density = st.slider("Streamline density", 0.5, 3.0, 1.0, 0.1)
     streamline_arrow_scale = st.slider("Streamline arrow scale", 0.02, 0.2, 0.09, 0.01)
 
+if parse_error:
+    st.error(parse_error)
+
 if st.button(label="PLOT", type="primary"):
     try:
-        f_expr, g_expr, f_num, g_num = parse_system(f_str, g_str)
+        if not parse_ok:
+            raise ValueError(parse_error or "System could not be parsed.")
+
         initial_conditions = parse_initial_conditions(ics_text)
 
+        f_wrapped = wrap_function(f_num, params, param_values)
+        g_wrapped = wrap_function(g_num, params, param_values)
+
+        f_expr_eval = substitute_parameters(f_expr, params, param_values)
+        g_expr_eval = substitute_parameters(g_expr, params, param_values)
+
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
-        U, V = compute_vector_field(f_num, g_num, X, Y)
+        U, V = compute_vector_field(f_wrapped, g_wrapped, X, Y)
         if normalize_vectors:
             U, V = normalize_vector_field(U, V)
 
         Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
-        Fn, Gn = compute_scalar_fields(f_num, g_num, Xn, Yn)
+        Fn, Gn = compute_scalar_fields(f_wrapped, g_wrapped, Xn, Yn)
 
         if not np.isfinite(U).any() or not np.isfinite(V).any():
             st.warning(
@@ -126,8 +195,8 @@ if st.button(label="PLOT", type="primary"):
         fixed_points = []
         if show_fixed_points:
             fixed_points = find_fixed_points_numeric(
-                f_expr,
-                g_expr,
+                f_expr_eval,
+                g_expr_eval,
                 xmin,
                 xmax,
                 ymin,
@@ -142,8 +211,8 @@ if st.button(label="PLOT", type="primary"):
 
         if show_fixed_points and show_fixed_point_analysis and fixed_points:
             jacobian_expr, fixed_point_analysis = analyze_fixed_points(
-                f_expr,
-                g_expr,
+                f_expr_eval,
+                g_expr_eval,
                 fixed_points,
             )
 
@@ -163,7 +232,12 @@ if st.button(label="PLOT", type="primary"):
         for i, (x0, y0) in enumerate(initial_conditions, start=1):
             if show_forward:
                 x_traj, y_traj = integrate_trajectory(
-                    f_num, g_num, x0, y0, t_span=(0, t_max), n_points=n_points
+                    f_wrapped,
+                    g_wrapped,
+                    x0,
+                    y0,
+                    t_span=(0, t_max),
+                    n_points=n_points,
                 )
                 fig = add_trajectory(fig, x_traj, y_traj, name=f"Forward {i}")
                 all_x.append(np.asarray(x_traj))
@@ -171,7 +245,12 @@ if st.button(label="PLOT", type="primary"):
 
             if show_backward:
                 x_traj_b, y_traj_b = integrate_trajectory(
-                    f_num, g_num, x0, y0, t_span=(0, -t_max), n_points=n_points
+                    f_wrapped,
+                    g_wrapped,
+                    x0,
+                    y0,
+                    t_span=(0, -t_max),
+                    n_points=n_points,
                 )
                 fig = add_trajectory(fig, x_traj_b, y_traj_b, name=f"Backward {i}")
                 all_x.append(np.asarray(x_traj_b))
@@ -190,8 +269,8 @@ if st.button(label="PLOT", type="primary"):
 
             if fixed_points:
                 for i, (xp, yp) in enumerate(fixed_points, start=1):
-                    fx_val = f_num(xp, yp)
-                    gy_val = g_num(xp, yp)
+                    fx_val = f_wrapped(xp, yp)
+                    gy_val = g_wrapped(xp, yp)
                     st.write(
                         f"{i}. ({xp:.10g}, {yp:.10g}) | "
                         f"f={fx_val:.3e}, g={gy_val:.3e}"
@@ -224,8 +303,19 @@ if st.button(label="PLOT", type="primary"):
                     st.write("Classification:", classification)
 
         st.subheader("Parsed system")
-        st.latex(r"\dot{x} = " + str(f_expr))
-        st.latex(r"\dot{y} = " + str(g_expr))
+        st.latex(r"\dot{x} = " + sp.latex(f_expr))
+
+        st.latex(r"\dot{y} = " + sp.latex(g_expr))
+
+        if params:
+            st.subheader("Parameter values used")
+            for p in params:
+                name = str(p)
+                st.write(f"{name} = {param_values[name]:.10g}")
+
+        st.subheader("Evaluated system")
+        st.latex(r"\dot{x} = " + sp.latex(f_expr_eval))
+        st.latex(r"\dot{y} = " + sp.latex(g_expr_eval))
 
     except Exception as e:
         st.error(str(e))

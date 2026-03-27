@@ -101,11 +101,21 @@ def parse_single_expression(expr_str: str) -> sp.Expr:
         ) from e
 
 
+def extract_parameters(f_expr: sp.Expr, g_expr: sp.Expr):
+    symbols = f_expr.free_symbols.union(g_expr.free_symbols)
+    params = [s for s in symbols if s not in {x, y}]
+    params = sorted(params, key=lambda s: s.name)
+    return params
+
+
 def parse_system(f_str: str, g_str: str):
     f_expr = parse_single_expression(f_str)
     g_expr = parse_single_expression(g_str)
 
-    f_num = sp.lambdify((x, y), f_expr, modules="numpy")
-    g_num = sp.lambdify((x, y), g_expr, modules="numpy")
+    params = extract_parameters(f_expr, g_expr)
+    arg_list = [x, y] + params
 
-    return f_expr, g_expr, f_num, g_num
+    f_num = sp.lambdify(arg_list, f_expr, modules="numpy")
+    g_num = sp.lambdify(arg_list, g_expr, modules="numpy")
+
+    return f_expr, g_expr, f_num, g_num, params

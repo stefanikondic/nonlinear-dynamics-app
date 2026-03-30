@@ -12,6 +12,7 @@ from core.plotting import (
     add_trajectory,
     apply_axis_limits,
     create_phase_figure,
+    create_streamline_figure,
     create_streamline_figure_custom,
 )
 from core.system import (
@@ -91,28 +92,28 @@ with right_mid:
     st.subheader("Field style")
     field_style = st.radio(
         "Vector field style",
-        ["Streamlines", "Arrows"],
+        ["Arrows", "Streamlines (classic)", "Streamlines (robust)"],
         index=0,
         horizontal=True,
     )
 
     normalize_vectors = st.checkbox("Normalize vector field", value=True)
-    arrows_per_streamline = st.slider("Arrows per streamline", 0, 3, 1)
-    arrow_scale = st.slider("Arrow length", 0.05, 0.6, 0.25, 0.05)
-    arrow_scale_ratio = st.slider("Arrow head size", 0.1, 0.8, 0.35, 0.05)
 
     n_seeds = 50
     streamline_t_max = 10.0
     streamline_density = 2.0
     streamline_arrow_scale = 0.09
 
-    if field_style == "Streamlines":
-        n_seeds = st.slider("Number of streamlines", 10, 200, 50)
-        streamline_t_max = st.slider("Streamline integration time", 1, 50, 10)
-        streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
-        streamline_arrow_scale = st.slider(
-            "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
-        )
+    if field_style in ["Streamlines (classic)", "Streamlines (robust)"]:
+        if field_style == "Streamlines (robust)":
+            n_seeds = st.slider("Number of streamlines", 10, 200, 50)
+            streamline_t_max = st.slider("Streamline integration time", 1, 50, 10)
+
+        if field_style == "Streamlines (classic)":
+            streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
+            streamline_arrow_scale = st.slider(
+                "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
+            )
 
         if normalize_vectors:
             st.warning(
@@ -178,7 +179,18 @@ if plot_clicked:
 
         if field_style == "Arrows":
             fig = create_phase_figure(X, Y, U_plot, V_plot, stride=stride)
-        else:
+
+        elif field_style == "Streamlines (classic)":
+            fig = create_streamline_figure(
+                X,
+                Y,
+                U_plot,
+                V_plot,
+                density=streamline_density,
+                arrow_scale=streamline_arrow_scale,
+            )
+
+        elif field_style == "Streamlines (robust)":
             fig = create_streamline_figure_custom(
                 rhs,
                 X,
@@ -188,10 +200,10 @@ if plot_clicked:
                 n_seeds=n_seeds,
                 t_max=streamline_t_max,
                 max_step=0.05,
-                arrows_per_streamline=1,
-                arrow_scale=0.25,
-                arrow_scale_ratio=0.35,
             )
+
+        else:
+            raise ValueError(f"Unknown field style: {field_style}")
 
         fixed_points = []
         if show_fixed_points:

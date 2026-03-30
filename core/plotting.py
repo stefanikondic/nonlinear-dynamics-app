@@ -161,17 +161,51 @@ def add_nullclines_from_contours(
 
 
 def create_streamline_figure(X, Y, U, V, density=1.0, arrow_scale=0.09):
-    x = X[0, :]
-    y = Y[:, 0]
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float)
+    U = np.asarray(U, dtype=float)
+    V = np.asarray(V, dtype=float)
 
-    fig = create_streamline(
-        x=x,
-        y=y,
-        u=U,
-        v=V,
-        density=density,
-        arrow_scale=arrow_scale,
-    )
+    if X.shape != Y.shape or X.shape != U.shape or X.shape != V.shape:
+        raise ValueError("X, Y, U, and V must all have the same shape.")
+
+    nrows, ncols = X.shape
+    if nrows < 3 or ncols < 3:
+        raise ValueError("Streamlines require at least a 3x3 grid.")
+
+    X_inner = X[1:-1, 1:-1]
+    Y_inner = Y[1:-1, 1:-1]
+    U_inner = U[1:-1, 1:-1]
+    V_inner = V[1:-1, 1:-1]
+
+    if not np.isfinite(U_inner).all() or not np.isfinite(V_inner).all():
+        raise ValueError(
+            "Streamlines cannot be drawn because the vector field contains NaN or inf values."
+        )
+
+    speed = np.sqrt(U_inner**2 + V_inner**2)
+    if np.all(speed < 1e-14):
+        raise ValueError(
+            "Streamlines cannot be drawn because the vector field is zero on the selected domain."
+        )
+
+    x = X_inner[0, :]
+    y = Y_inner[:, 0]
+
+    try:
+        fig = create_streamline(
+            x=x,
+            y=y,
+            u=U_inner,
+            v=V_inner,
+            density=density,
+            arrow_scale=arrow_scale,
+        )
+    except Exception as e:
+        raise ValueError(
+            "Plotly could not generate streamlines on this domain. "
+            "Try slightly changing the domain or use Arrows."
+        ) from e
 
     fig.update_layout(
         title="Phase portrait",

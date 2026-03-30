@@ -102,6 +102,11 @@ with right_mid:
     )
     normalize_vectors = st.checkbox("Normalize vector field", value=True)
 
+    if field_style == "Streamlines" and normalize_vectors:
+        st.warning(
+            "Normalized vector fields may cause unstable streamline generation near zeros of the field."
+        )
+
     streamline_density = 2.0
     streamline_arrow_scale = 0.09
 

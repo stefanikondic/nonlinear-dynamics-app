@@ -36,7 +36,6 @@ def apply_axis_limits(fig, x_values, y_values, padding_ratio=0.08):
 
 
 def create_phase_figure(X, Y, U, V, stride=2):
-    # ↓↓↓ OVDJE IDE STRIDE ↓↓↓
     X_plot = X[::stride, ::stride]
     Y_plot = Y[::stride, ::stride]
     U_plot = U[::stride, ::stride]
@@ -220,7 +219,6 @@ def create_streamline_figure(X, Y, U, V, density=1.0, arrow_scale=0.09):
 
 def compute_streamline(rhs, x0, y0, t_max=10, max_step=0.05):
     sol_f = solve_ivp(rhs, (0, t_max), [x0, y0], max_step=max_step)
-
     sol_b = solve_ivp(rhs, (0, -t_max), [x0, y0], max_step=max_step)
 
     x = np.concatenate([sol_b.y[0][::-1], sol_f.y[0]])
@@ -236,7 +234,6 @@ def generate_seed_points(X, Y, U, V, n_seeds=20, min_speed=1e-3):
     ys = Y.flatten()
     speeds = np.sqrt(U.flatten() ** 2 + V.flatten() ** 2)
 
-    # filtriraj spore tačke (blizu fiksnih tačaka)
     mask = speeds > min_speed
 
     xs = xs[mask]
@@ -245,7 +242,6 @@ def generate_seed_points(X, Y, U, V, n_seeds=20, min_speed=1e-3):
     if len(xs) == 0:
         return []
 
-    # uzmi ravnomjerno raspoređene seedove
     idx = np.linspace(0, len(xs) - 1, n_seeds).astype(int)
 
     for i in idx:
@@ -254,8 +250,105 @@ def generate_seed_points(X, Y, U, V, n_seeds=20, min_speed=1e-3):
     return seeds
 
 
+def _pick_arrow_indices(n_points, n_arrows=1, margin=0.15):
+    if n_points < 5 or n_arrows <= 0:
+        return []
+
+    start = int(np.floor(margin * (n_points - 1)))
+    end = int(np.ceil((1.0 - margin) * (n_points - 1)))
+
+    if end <= start:
+        return []
+
+    if n_arrows == 1:
+        return [(start + end) // 2]
+
+    return np.linspace(start, end, n_arrows).astype(int).tolist()
+
+
+def _add_quiver_arrow_on_streamline(
+    fig,
+    x,
+    y,
+    n_arrows=1,
+    arrow_scale=0.25,
+    arrow_scale_ratio=0.35,
+):
+    """
+    Dodaje male geometrijske strelice duž strujnice koristeći create_quiver.
+    Time strelice ostaju u data koordinatama i lijepo prate zoom.
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    if len(x) < 3 or len(y) < 3 or n_arrows <= 0:
+        return fig
+
+    arrow_indices = _pick_arrow_indices(len(x), n_arrows=n_arrows)
+    if not arrow_indices:
+        return fig
+
+    xq = []
+    yq = []
+    uq = []
+    vq = []
+
+    for i in arrow_indices:
+        if i <= 0 or i >= len(x) - 1:
+            continue
+
+        dx = x[i + 1] - x[i - 1]
+        dy = y[i + 1] - y[i - 1]
+
+        if not np.isfinite(dx) or not np.isfinite(dy):
+            continue
+
+        norm = np.hypot(dx, dy)
+        if norm < 1e-14:
+            continue
+
+        # Mala strelica duž tangente
+        dx_unit = dx / norm
+        dy_unit = dy / norm
+
+        xq.append(x[i])
+        yq.append(y[i])
+        uq.append(arrow_scale * dx_unit)
+        vq.append(arrow_scale * dy_unit)
+
+    if not xq:
+        return fig
+
+    arrow_fig = create_quiver(
+        xq,
+        yq,
+        uq,
+        vq,
+        scale=1.0,
+        arrow_scale=arrow_scale_ratio,
+        name="",
+    )
+
+    for trace in arrow_fig.data:
+        trace.showlegend = False
+        trace.hoverinfo = "skip"
+        fig.add_trace(trace)
+
+    return fig
+
+
 def create_streamline_figure_custom(
-    rhs, X, Y, U, V, n_seeds=30, t_max=10, max_step=0.05
+    rhs,
+    X,
+    Y,
+    U,
+    V,
+    n_seeds=30,
+    t_max=10,
+    max_step=0.05,
+    arrows_per_streamline=1,
+    arrow_scale=0.25,
+    arrow_scale_ratio=0.35,
 ):
     fig = go.Figure()
 
@@ -265,6 +358,9 @@ def create_streamline_figure_custom(
         try:
             x, y = compute_streamline(rhs, x0, y0, t_max, max_step)
 
+            if len(x) < 2 or len(y) < 2:
+                continue
+
             fig.add_trace(
                 go.Scatter(
                     x=x,
@@ -272,10 +368,20 @@ def create_streamline_figure_custom(
                     mode="lines",
                     line=dict(width=1),
                     showlegend=False,
+                    hoverinfo="skip",
                 )
             )
+
+            fig = _add_quiver_arrow_on_streamline(
+                fig,
+                x,
+                y,
+                n_arrows=arrows_per_streamline,
+                arrow_scale=arrow_scale,
+                arrow_scale_ratio=arrow_scale_ratio,
+            )
+
         except Exception:
-            # preskoči ako integracija pukne
             continue
 
     fig.update_layout(

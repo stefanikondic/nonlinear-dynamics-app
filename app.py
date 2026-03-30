@@ -97,6 +97,9 @@ with right_mid:
     )
 
     normalize_vectors = st.checkbox("Normalize vector field", value=True)
+    arrows_per_streamline = st.slider("Arrows per streamline", 0, 3, 1)
+    arrow_scale = st.slider("Arrow length", 0.05, 0.6, 0.25, 0.05)
+    arrow_scale_ratio = st.slider("Arrow head size", 0.1, 0.8, 0.35, 0.05)
 
     n_seeds = 50
     streamline_t_max = 10.0
@@ -132,6 +135,7 @@ with right_bottom:
 
 st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
 plot_clicked = st.button(label="PLOT", type="primary")
+
 
 if plot_clicked:
     try:
@@ -184,6 +188,9 @@ if plot_clicked:
                 n_seeds=n_seeds,
                 t_max=streamline_t_max,
                 max_step=0.05,
+                arrows_per_streamline=1,
+                arrow_scale=0.25,
+                arrow_scale_ratio=0.35,
             )
 
         fixed_points = []

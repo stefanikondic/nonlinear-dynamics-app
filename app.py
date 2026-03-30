@@ -31,13 +31,15 @@ apply_app_styles()
 
 st.title("Nonlinear Dynamics App")
 st.caption(
-    "Examples: sinx, cosx, sinhx, asinx, sqrtx, lnx, e^x, x^2, 2x, xy, pi. "
-    "Any symbol other than x and y is treated as a parameter."
+    "Enter a system and click PLOT. Open Advanced settings only if you want finer control."
 )
 
-left_top, right_top = st.columns([1, 1], gap="large")
+# ------------------------------------------------------------
+# MAIN INPUTS
+# ------------------------------------------------------------
+top_left, top_right = st.columns([1, 1], gap="large")
 
-with left_top:
+with top_left:
     st.subheader("System")
     f_str = st.text_input("dx/dt =", "y")
     g_str = st.text_input("dy/dt =", "-x")
@@ -60,7 +62,7 @@ with left_top:
             name = str(p)
             param_values[name] = get_parameter_value(name, default="1.0")
 
-with right_top:
+with top_right:
     st.subheader("Initial conditions")
     ics_text = st.text_area(
         "Enter one initial condition per line as: x0, y0",
@@ -71,73 +73,145 @@ with right_top:
 if parse_error:
     st.error(parse_error)
 
-left_mid, right_mid = st.columns([1, 1], gap="large")
+# ------------------------------------------------------------
+# DEFAULT VALUES FOR ADVANCED SETTINGS
+# ------------------------------------------------------------
+xmin = -3.0
+xmax = 3.0
+ymin = -3.0
+ymax = 3.0
+n = 40
+stride = 2
 
-with left_mid:
-    st.subheader("Domain and grid")
-    xmin = st.number_input("x_min", value=-3.0)
-    xmax = st.number_input("x_max", value=3.0)
-    ymin = st.number_input("y_min", value=-3.0)
-    ymax = st.number_input("y_max", value=3.0)
-    n = st.slider("Grid density", 10, 100, 40)
-    stride = st.slider("Vector field density (stride)", 1, 5, 2)
+traj_t_max = 20.0
+n_points = 1000
+show_forward = True
+show_backward = False
 
-with right_mid:
-    st.subheader("Integration")
-    traj_t_max = st.number_input("Trajectory t_max", value=20.0, min_value=0.1)
-    n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
-    show_forward = st.checkbox("Show forward trajectories", value=True)
-    show_backward = st.checkbox("Show backward trajectories", value=False)
+field_style = "Arrows"
+normalize_vectors = True
 
-    st.subheader("Field style")
-    field_style = st.radio(
-        "Vector field style",
-        ["Arrows", "Streamlines (classic)", "Streamlines (robust)"],
-        index=0,
-        horizontal=True,
-    )
+n_seeds = 50
+streamline_t_max = 10
+streamline_density = 2.0
+streamline_arrow_scale = 0.09
 
-    normalize_vectors = st.checkbox("Normalize vector field", value=True)
+show_fixed_points = True
+show_fixed_point_analysis = True
+fp_grid_density = 9
 
-    n_seeds = 50
-    streamline_t_max = 10.0
-    streamline_density = 2.0
-    streamline_arrow_scale = 0.09
+show_x_nullcline = False
+show_y_nullcline = False
+nullcline_n = 150
 
-    if field_style in ["Streamlines (classic)", "Streamlines (robust)"]:
-        if field_style == "Streamlines (robust)":
-            n_seeds = st.slider("Number of streamlines", 10, 200, 50)
-            streamline_t_max = st.slider("Streamline integration time", 1, 50, 10)
+# ------------------------------------------------------------
+# ADVANCED SETTINGS
+# ------------------------------------------------------------
+with st.expander("Advanced settings", expanded=False):
+    adv_left, adv_right = st.columns([1, 1], gap="large")
+
+    with adv_left:
+        st.subheader("Domain and grid")
+        xmin = st.number_input("x_min", value=xmin)
+        xmax = st.number_input("x_max", value=xmax)
+        ymin = st.number_input("y_min", value=ymin)
+        ymax = st.number_input("y_max", value=ymax)
+        n = st.slider("Grid density", 10, 100, n)
+        stride = st.slider("Vector field density (stride)", 1, 5, stride)
+
+        st.subheader("Field style")
+        field_style = st.radio(
+            "Vector field style",
+            ["Arrows", "Streamlines (classic)", "Streamlines (robust)"],
+            index=0,
+            horizontal=False,
+        )
+        normalize_vectors = st.checkbox(
+            "Normalize vector field",
+            value=normalize_vectors,
+        )
 
         if field_style == "Streamlines (classic)":
-            streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
+            streamline_density = st.slider(
+                "Streamline density",
+                0.5,
+                3.0,
+                streamline_density,
+                0.1,
+            )
             streamline_arrow_scale = st.slider(
-                "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
+                "Streamline arrow scale",
+                0.02,
+                0.2,
+                streamline_arrow_scale,
+                0.01,
             )
 
-        if normalize_vectors:
+        elif field_style == "Streamlines (robust)":
+            n_seeds = st.slider("Number of streamlines", 10, 200, n_seeds)
+            streamline_t_max = st.slider(
+                "Streamline integration time",
+                1,
+                50,
+                streamline_t_max,
+            )
+
+        if (
+            field_style in ["Streamlines (classic)", "Streamlines (robust)"]
+            and normalize_vectors
+        ):
             st.warning(
-                "Normalized vector fields may cause unstable streamline generation near zeros of the field."
+                "Normalized vector fields may behave poorly near zeros of the field."
             )
 
-left_bottom, right_bottom = st.columns([1, 1], gap="large")
+    with adv_right:
+        st.subheader("Trajectories")
+        traj_t_max = st.number_input(
+            "Trajectory t_max",
+            value=traj_t_max,
+            min_value=0.1,
+        )
+        n_points = st.slider("Integration points", 100, 5000, n_points, step=100)
+        show_forward = st.checkbox("Show forward trajectories", value=show_forward)
+        show_backward = st.checkbox("Show backward trajectories", value=show_backward)
 
-with left_bottom:
-    st.subheader("Fixed points")
-    show_fixed_points = st.checkbox("Show fixed points", value=True)
-    show_fixed_point_analysis = st.checkbox("Show fixed-point analysis", value=True)
-    fp_grid_density = st.slider("Fixed-point search density", 5, 25, 9, step=2)
+        st.subheader("Fixed points")
+        show_fixed_points = st.checkbox("Show fixed points", value=show_fixed_points)
+        show_fixed_point_analysis = st.checkbox(
+            "Show fixed-point analysis",
+            value=show_fixed_point_analysis,
+        )
+        fp_grid_density = st.slider(
+            "Fixed-point search density",
+            5,
+            25,
+            fp_grid_density,
+            step=2,
+        )
 
-with right_bottom:
-    st.subheader("Nullclines")
-    show_x_nullcline = st.checkbox("Show x-nullcline (dx/dt = 0)", value=False)
-    show_y_nullcline = st.checkbox("Show y-nullcline (dy/dt = 0)", value=False)
-    nullcline_n = st.slider("Nullcline density", 50, 300, 150, step=10)
+        st.subheader("Nullclines")
+        show_x_nullcline = st.checkbox(
+            "Show x-nullcline (dx/dt = 0)",
+            value=show_x_nullcline,
+        )
+        show_y_nullcline = st.checkbox(
+            "Show y-nullcline (dy/dt = 0)",
+            value=show_y_nullcline,
+        )
+        nullcline_n = st.slider(
+            "Nullcline density",
+            50,
+            300,
+            nullcline_n,
+            step=10,
+        )
 
 st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
 plot_clicked = st.button(label="PLOT", type="primary")
 
-
+# ------------------------------------------------------------
+# PLOT
+# ------------------------------------------------------------
 if plot_clicked:
     try:
         if not parse_ok:

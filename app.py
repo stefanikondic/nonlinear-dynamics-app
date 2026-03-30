@@ -1,16 +1,11 @@
-import streamlit as st
-import numpy as np
 import traceback
+
+import numpy as np
+import streamlit as st
 import sympy as sp
 
+from core.analysis import analyze_fixed_points, find_fixed_points_numeric
 from core.parser import parse_system
-from core.system import (
-    compute_scalar_fields,
-    create_mesh,
-    compute_vector_field,
-    integrate_trajectory,
-    normalize_vector_field,
-)
 from core.plotting import (
     add_fixed_points,
     add_nullclines_from_contours,
@@ -18,17 +13,18 @@ from core.plotting import (
     apply_axis_limits,
     create_phase_figure,
     create_streamline_figure,
+    create_streamline_figure_custom,
 )
-from core.analysis import find_fixed_points_numeric, analyze_fixed_points
-
-from utils.helpers import (
-    parse_initial_conditions,
-    wrap_function,
-    substitute_parameters,
+from core.system import (
+    compute_scalar_fields,
+    compute_vector_field,
+    create_mesh,
+    integrate_trajectory,
+    normalize_vector_field,
 )
 from ui.controls import get_parameter_value
 from ui.styles import apply_app_styles
-
+from utils.helpers import parse_initial_conditions, substitute_parameters, wrap_function
 
 st.set_page_config(page_title="Nonlinear Dynamics App", layout="centered")
 apply_app_styles()
@@ -88,7 +84,7 @@ with left_mid:
 
 with right_mid:
     st.subheader("Integration")
-    t_max = st.number_input("t_max", value=20.0, min_value=0.1)
+    traj_t_max = st.number_input("Trajectory t_max", value=20.0, min_value=0.1)
     n_points = st.slider("Integration points", 100, 5000, 1000, step=100)
     show_forward = st.checkbox("Show forward trajectories", value=True)
     show_backward = st.checkbox("Show backward trajectories", value=False)
@@ -96,25 +92,33 @@ with right_mid:
     st.subheader("Field style")
     field_style = st.radio(
         "Vector field style",
-        ["Streamlines", "Arrows"],
+        ["Arrows", "Streamlines (classic)", "Streamlines (robust)"],
         index=0,
         horizontal=True,
     )
+
     normalize_vectors = st.checkbox("Normalize vector field", value=True)
 
-    if field_style == "Streamlines" and normalize_vectors:
-        st.warning(
-            "Normalized vector fields may cause unstable streamline generation near zeros of the field."
-        )
-
+    n_seeds = 50
+    streamline_t_max = 10.0
     streamline_density = 2.0
     streamline_arrow_scale = 0.09
 
-    if field_style == "Streamlines":
-        streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
-        streamline_arrow_scale = st.slider(
-            "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
-        )
+    if field_style in ["Streamlines (classic)", "Streamlines (robust)"]:
+        if field_style == "Streamlines (robust)":
+            n_seeds = st.slider("Number of streamlines", 10, 200, 50)
+            streamline_t_max = st.slider("Streamline integration time", 1, 50, 10)
+
+        if field_style == "Streamlines (classic)":
+            streamline_density = st.slider("Streamline density", 0.5, 3.0, 2.0, 0.1)
+            streamline_arrow_scale = st.slider(
+                "Streamline arrow scale", 0.02, 0.2, 0.09, 0.01
+            )
+
+        if normalize_vectors:
+            st.warning(
+                "Normalized vector fields may cause unstable streamline generation near zeros of the field."
+            )
 
 left_bottom, right_bottom = st.columns([1, 1], gap="large")
 
@@ -133,6 +137,7 @@ with right_bottom:
 st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
 plot_clicked = st.button(label="PLOT", type="primary")
 
+
 if plot_clicked:
     try:
         if not parse_ok:
@@ -143,18 +148,25 @@ if plot_clicked:
         f_wrapped = wrap_function(f_num, params, param_values)
         g_wrapped = wrap_function(g_num, params, param_values)
 
+        def rhs(t, z):
+            x, y = z
+            return [f_wrapped(x, y), g_wrapped(x, y)]
+
         f_expr_eval = substitute_parameters(f_expr, params, param_values)
         g_expr_eval = substitute_parameters(g_expr, params, param_values)
 
         X, Y = create_mesh(xmin, xmax, ymin, ymax, n, n)
-        U, V = compute_vector_field(f_wrapped, g_wrapped, X, Y)
+        U_raw, V_raw = compute_vector_field(f_wrapped, g_wrapped, X, Y)
+
         if normalize_vectors:
-            U, V = normalize_vector_field(U, V)
+            U_plot, V_plot = normalize_vector_field(U_raw, V_raw)
+        else:
+            U_plot, V_plot = U_raw, V_raw
 
         Xn, Yn = create_mesh(xmin, xmax, ymin, ymax, nullcline_n, nullcline_n)
         Fn, Gn = compute_scalar_fields(f_wrapped, g_wrapped, Xn, Yn)
 
-        if not np.isfinite(U).any() or not np.isfinite(V).any():
+        if not np.isfinite(U_raw).any() or not np.isfinite(V_raw).any():
             st.warning(
                 "Vector field could not be evaluated on the chosen domain. "
                 "The system may be outside its domain there, e.g. log(x) for x <= 0 or sqrt(x) for x < 0."
@@ -166,16 +178,32 @@ if plot_clicked:
             )
 
         if field_style == "Arrows":
-            fig = create_phase_figure(X, Y, U, V, stride=stride)
-        else:
+            fig = create_phase_figure(X, Y, U_plot, V_plot, stride=stride)
+
+        elif field_style == "Streamlines (classic)":
             fig = create_streamline_figure(
                 X,
                 Y,
-                U,
-                V,
+                U_plot,
+                V_plot,
                 density=streamline_density,
                 arrow_scale=streamline_arrow_scale,
             )
+
+        elif field_style == "Streamlines (robust)":
+            fig = create_streamline_figure_custom(
+                rhs,
+                X,
+                Y,
+                U_raw,
+                V_raw,
+                n_seeds=n_seeds,
+                t_max=streamline_t_max,
+                max_step=0.05,
+            )
+
+        else:
+            raise ValueError(f"Unknown field style: {field_style}")
 
         fixed_points = []
         if show_fixed_points:
@@ -221,7 +249,7 @@ if plot_clicked:
                     g_wrapped,
                     x0,
                     y0,
-                    t_span=(0, t_max),
+                    t_span=(0, traj_t_max),
                     n_points=n_points,
                 )
                 fig = add_trajectory(fig, x_traj, y_traj, name=f"Forward {i}")
@@ -234,7 +262,7 @@ if plot_clicked:
                     g_wrapped,
                     x0,
                     y0,
-                    t_span=(0, -t_max),
+                    t_span=(0, -traj_t_max),
                     n_points=n_points,
                 )
                 fig = add_trajectory(fig, x_traj_b, y_traj_b, name=f"Backward {i}")

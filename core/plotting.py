@@ -1,8 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import plotly.graph_objects as go
-from plotly.figure_factory import create_quiver
-import matplotlib.pyplot as plt
-from plotly.figure_factory import create_streamline
+from plotly.figure_factory import create_quiver, create_streamline
+from scipy.integrate import solve_ivp
 
 
 def compute_axis_limits(x_values, y_values, padding_ratio=0.08):
@@ -215,4 +215,76 @@ def create_streamline_figure(X, Y, U, V, density=1.0, arrow_scale=0.09):
     )
 
     fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    return fig
+
+
+def compute_streamline(rhs, x0, y0, t_max=10, max_step=0.05):
+    sol_f = solve_ivp(rhs, (0, t_max), [x0, y0], max_step=max_step)
+
+    sol_b = solve_ivp(rhs, (0, -t_max), [x0, y0], max_step=max_step)
+
+    x = np.concatenate([sol_b.y[0][::-1], sol_f.y[0]])
+    y = np.concatenate([sol_b.y[1][::-1], sol_f.y[1]])
+
+    return x, y
+
+
+def generate_seed_points(X, Y, U, V, n_seeds=20, min_speed=1e-3):
+    seeds = []
+
+    xs = X.flatten()
+    ys = Y.flatten()
+    speeds = np.sqrt(U.flatten() ** 2 + V.flatten() ** 2)
+
+    # filtriraj spore tačke (blizu fiksnih tačaka)
+    mask = speeds > min_speed
+
+    xs = xs[mask]
+    ys = ys[mask]
+
+    if len(xs) == 0:
+        return []
+
+    # uzmi ravnomjerno raspoređene seedove
+    idx = np.linspace(0, len(xs) - 1, n_seeds).astype(int)
+
+    for i in idx:
+        seeds.append((xs[i], ys[i]))
+
+    return seeds
+
+
+def create_streamline_figure_custom(
+    rhs, X, Y, U, V, n_seeds=30, t_max=10, max_step=0.05
+):
+    fig = go.Figure()
+
+    seeds = generate_seed_points(X, Y, U, V, n_seeds=n_seeds)
+
+    for x0, y0 in seeds:
+        try:
+            x, y = compute_streamline(rhs, x0, y0, t_max, max_step)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="lines",
+                    line=dict(width=1),
+                    showlegend=False,
+                )
+            )
+        except Exception:
+            # preskoči ako integracija pukne
+            continue
+
+    fig.update_layout(
+        title="Phase portrait (custom streamlines)",
+        xaxis_title="x",
+        yaxis_title="y",
+        template="plotly_white",
+    )
+
+    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+
     return fig

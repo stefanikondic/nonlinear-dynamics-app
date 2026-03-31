@@ -4,10 +4,15 @@ import numpy as np
 import streamlit as st
 import sympy as sp
 
-from core.analysis import analyze_fixed_points, find_fixed_points_numeric
+from core.analysis import (
+    analyze_fixed_points,
+    extract_saddles,
+    find_fixed_points_numeric,
+)
 from core.plotting import (
     add_fixed_points,
     add_nullclines_from_contours,
+    add_separatrices,
     add_trajectory,
     apply_axis_limits,
     create_phase_figure,
@@ -16,6 +21,7 @@ from core.plotting import (
 )
 from core.system import (
     compute_scalar_fields,
+    compute_separatrices,
     compute_vector_field,
     create_mesh,
     integrate_trajectory,
@@ -173,6 +179,23 @@ if plot_clicked:
                 g_expr_eval,
                 fixed_points,
             )
+
+        if settings["show_separatrices"] and fixed_point_analysis:
+            try:
+                saddles = extract_saddles(fixed_point_analysis)
+
+                branches = compute_separatrices(
+                    rhs,
+                    saddles,
+                    eps=settings["sep_eps"],
+                    t_max=settings["sep_tmax"],
+                    n_points=settings["sep_n"],
+                )
+
+                fig = add_separatrices(fig, branches)
+
+            except Exception as e:
+                st.warning(f"Separatrices failed: {e}")
 
         fig = add_nullclines_from_contours(
             fig,

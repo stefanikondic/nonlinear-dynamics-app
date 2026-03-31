@@ -294,3 +294,28 @@ def create_streamline_figure_custom(
     fig.update_yaxes(scaleanchor="x", scaleratio=1)
 
     return fig
+
+
+def add_separatrices(fig, branches):
+    for typ, x, y in branches:
+        if len(x) < 2:
+            continue
+
+        if typ == "stable":
+            dash = "dash"
+            width = 3
+        else:
+            dash = "solid"
+            width = 3
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode="lines",
+                line=dict(width=width, dash=dash),
+                showlegend=False,
+            )
+        )
+
+    return fig

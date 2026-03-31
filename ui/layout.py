@@ -197,5 +197,25 @@ def render_advanced_settings():
                 settings["nullcline_n"],
                 step=10,
             )
+            settings["show_separatrices"] = st.checkbox(
+                "Show separatrices",
+                value=False,
+            )
+            settings["sep_eps"] = st.number_input(
+                "Separatrix epsilon",
+                value=1e-4,
+                format="%.6f",
+            )
+            settings["sep_tmax"] = st.number_input(
+                "Separatrix t_max",
+                value=20.0,
+            )
+            settings["sep_n"] = st.slider(
+                "Separatrix resolution",
+                200,
+                5000,
+                1000,
+                step=100,
+            )
 
     return settings

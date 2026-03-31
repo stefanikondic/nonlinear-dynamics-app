@@ -63,3 +63,79 @@ def normalize_vector_field(U, V, eps=1e-12):
     V_norm = V / magnitude
 
     return U_norm, V_norm
+
+
+def _normalize(v, tol=1e-12):
+    n = np.linalg.norm(v)
+    if n < tol:
+        return None
+    return v / n
+
+
+def integrate_separatrix(
+    rhs,
+    point,
+    direction,
+    eps=1e-4,
+    t_max=20,
+    n_points=1000,
+    forward=True,
+):
+    v = _normalize(direction)
+    if v is None:
+        return None
+
+    z0 = np.array(point) + eps * v
+
+    t_span = (0, t_max) if forward else (0, -t_max)
+    t_eval = np.linspace(t_span[0], t_span[1], n_points)
+
+    sol = solve_ivp(
+        rhs,
+        t_span,
+        z0,
+        t_eval=t_eval,
+        rtol=1e-8,
+        atol=1e-10,
+        method="DOP853",
+    )
+
+    return sol.y[0], sol.y[1]
+
+
+def compute_separatrices(rhs, saddle_data, eps=1e-4, t_max=20, n_points=1000):
+    branches = []
+
+    for saddle in saddle_data:
+        point = saddle["point"]
+        eigvals = saddle["eigenvalues"]
+        eigvecs = saddle["eigenvectors"]
+
+        for i in range(len(eigvals)):
+            lam = np.real(eigvals[i])
+            v = np.real(eigvecs[:, i])
+
+            if np.linalg.norm(v) < 1e-12:
+                continue
+
+            if lam > 0:
+                # unstable → forward
+                for sign in (+1, -1):
+                    res = integrate_separatrix(
+                        rhs, point, sign * v, eps, t_max, n_points, forward=True
+                    )
+                    if res:
+                        x, y = res
+                        branches.append(("unstable", x, y))
+
+            elif lam < 0:
+                # stable → backward
+                for sign in (+1, -1):
+                    res = integrate_separatrix(
+                        rhs, point, sign * v, eps, t_max, n_points, forward=False
+                    )
+                    if res:
+                        x, y = res
+                        branches.append(("stable", x, y))
+
+    return branches

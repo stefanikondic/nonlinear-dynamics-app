@@ -142,3 +142,23 @@ def analyze_fixed_points(f_expr, g_expr, fixed_points):
         )
 
     return jacobian_expr, results
+
+
+def extract_saddles(fixed_point_analysis):
+    saddles = []
+
+    for result in fixed_point_analysis:
+        if result["classification"] == "saddle":
+            J = result["jacobian"]
+            eigvals, eigvecs = np.linalg.eig(J)
+
+            saddles.append(
+                {
+                    "point": result["point"],
+                    "jacobian": J,
+                    "eigenvalues": eigvals,
+                    "eigenvectors": eigvecs,
+                }
+            )
+
+    return saddles

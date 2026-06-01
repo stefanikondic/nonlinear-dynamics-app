@@ -18,16 +18,11 @@ transformations = standard_transformations + (
 def preprocess_expression(expr: str) -> str:
     expr = expr.strip().lower()
     expr = re.sub(r"\s+", "", expr)
-
-    # ln -> log
     expr = re.sub(r"\bln\b", "log", expr)
-
-    # alternative inverse trig names
     expr = re.sub(r"\barcsin\b", "asin", expr)
     expr = re.sub(r"\barccos\b", "acos", expr)
     expr = re.sub(r"\barctan\b", "atan", expr)
 
-    # function shorthands like sinx, sqrtx, lnx, asinx, sinhx...
     simple_func_map = {
         "sin": "sin",
         "cos": "cos",
@@ -44,7 +39,6 @@ def preprocess_expression(expr: str) -> str:
         "abs": "Abs",
     }
 
-    # Longer names first so sinhx is not partially matched as sin(hx)
     for user_name, sympy_name in sorted(
         simple_func_map.items(), key=lambda kv: -len(kv[0])
     ):
@@ -54,8 +48,6 @@ def preprocess_expression(expr: str) -> str:
             expr,
         )
 
-    # e^x -> exp(x)
-    # e^(x+y) -> exp(x+y)
     expr = re.sub(r"\be\^\(([^()]+)\)", r"exp(\1)", expr)
     expr = re.sub(r"\be\^([a-z0-9\.]+)", r"exp(\1)", expr)
 
